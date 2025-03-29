@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.16)
+project(PIM_Compiler)
+
+set(CMAKE_CXX_STANDARD 17)
+
+find_package(LLVM REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+
+add_definitions(${LLVM_DEFINITIONS})
+include_directories(${LLVM_INCLUDE_DIRS})
+link_directories(${LLVM_LIBRARY_DIRS})
+
+add_executable(PIM_Compiler src/main.cpp src/Lexer.cpp src/Parser.cpp src/CodeGen.cpp src/TargetBackend.cpp)
+target_link_libraries(PIM_Compiler LLVM)
+include_directories(${CMAKE_SOURCE_DIR}/include)
