@@ -2,9 +2,6 @@
 
 A compiler that generates PIM (Processing-In-Memory) ISA code from matrix operation specifications.
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/zenistu17/PIM_Compiler/build.yml?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
-
 ## Features
 
 - Converts matrix operations to PIM ISA instructions
