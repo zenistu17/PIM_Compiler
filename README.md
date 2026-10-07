@@ -5,9 +5,9 @@ A compiler that generates PIM (Processing-In-Memory) ISA code from matrix operat
 ## Features
 
 - Converts matrix operations to PIM ISA instructions
-- Supports matrix multiplication, addition, and other linear algebra operations
+- Recognizes C/C++ matrix-multiplication loops, including rectangular matrices
 - Automatic memory allocation and management
-- Generates optimized PIM instruction streams
+- Emits validated PIM instruction streams
 
 ## Project Structure
 
@@ -34,23 +34,41 @@ PIM_Compiler/
 
 ## Prerequisites
 
-- C++17 compatible compiler
-- CMake (≥ 3.10)
-- LLVM (optional, for advanced features)
+- A C++17 compatible compiler (GCC, Clang, or MSVC)
+- CMake 3.16 or newer
+
+The compiler is self-contained and does not require LLVM.  A clean checkout
+can therefore be configured on a machine that only has a standard C++ toolchain.
 
 ## Building
 
 ```bash
-mkdir build && cd build
-cmake ..
-make
+cmake -S . -B build
+cmake --build build
 ```
+
+The executable is written to `build/PIM_Compiler` (or
+`build/Debug/PIM_Compiler.exe` with a multi-configuration generator).
 
 ## Usage
 
 ```bash
 ./build/PIM_Compiler tests/test1.cpp -o output.isa
 ```
+
+The command expects exactly one source path and an output path.  Diagnostics are
+written to stderr and a non-zero exit status is returned when either file cannot
+be opened or compilation fails.  Create the output directory before invoking
+the command.
+
+Matrix dimensions may be numeric literals or numeric `#define` values such as
+`N`, `ROWS`, `COLS`, and `INNER`.  The frontend preserves each matrix's row and
+column shape so `A[ROWS][INNER] * B[INNER][COLS]` is allocated correctly.
+
+The accepted source subset is a C/C++ function with indexed assignments of the
+form `C[i][j] = A[i][k] * B[k][j]` (or `+=`) inside loops.  This frontend does
+not compile general C++ or scalar matrix addition; malformed expressions and
+unknown dimensions are reported as compilation errors.
 
 Example test.cpp:
 ```cpp
@@ -81,49 +99,19 @@ int main() {
 
 ## Example Output
 
+For the 4x4 example above, the generated stream contains the following
+allocation and execution records (the complete stream also contains the MAC
+and matrix-multiply program blocks):
+
 ```isa
-# MEMORY CONFIGURATION
-ALLOCATE 0x0000 0xFFFF
-
-# Define the MAC (Multiply-Accumulate) operation for dot product
-# First program the MAC function into the pPIM core
-PROG r0, mac_operation
-# MAC operation microcode
-EXE MUL r1, ah, bh  # Multiply high bits
-EXE MUL r2, al, bl  # Multiply low bits
-EXE MUL r3, ah, bl  # Multiply high with low
-EXE MUL r4, al, bh  # Multiply low with high
-EXE ADD r5, r3, r4  # Combine cross products
-EXE ADD r6, r1, r2  # Combine direct products
-EXE ADD r0, r5, r6  # Final result
-END mac_operation
-
-# Define a matrix multiplication operation
-# Program the matrix multiplication function into the pPIM core
-PROG r2, matrix_multiply
-# Matrix multiplication microcode
-EXE ADD r0, r1, r2  # Addition operation: r0 = r1 + r2
-EXE MUL r0, r1, r2  # Multiplication operation: r0 = r1 * r2
-EXE ZERO r0         # Zero register: r0 = 0
-# Matrix multiplication implementation for 4x4 matrices
-# For each element of the result matrix
-# Z[i][j] = sum(X[i][k] * Y[k][j]) for all k
-EXE ZERO acc                # Initialize accumulator to 0
-EXE READ r1, X_addr[i][k]   # Load X[i][k]
-EXE READ r2, Y_addr[k][j]   # Load Y[k][j]
-EXE MUL r3, r1, r2          # r3 = X[i][k] * Y[k][j]
-EXE ADD acc, acc, r3        # acc += r3
-EXE WRITE Z_addr[i][j], acc # Store result to Z[i][j]
-END matrix_multiply
-
 # MATRIX ALLOCATIONS
-# Matrix X allocated at 0x1000
-# Matrix Y allocated at 0x1040
-# Matrix Z allocated at 0x1080
+# Matrix X allocated at 0x1000 (4x4)
+# Matrix Y allocated at 0x1040 (4x4)
+# Matrix Z allocated at 0x1080 (4x4)
 
 # MATRIX OPERATIONS
 # MATRIX MULTIPLICATION X * Y -> Z
-EXE r2, 0x1000, 0x1040, 0x1080, 4
+EXE r2, 0x1000, 0x1040, 0x1080, 4, 4, 4
 
 # MEMORY RELEASE
 FREE 0x1080 64

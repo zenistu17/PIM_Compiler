@@ -1,0 +1,9 @@
+/build/
+*.isa
+*.o
+*.obj
+*.exe
+.DS_Store
+finalSubmission/
+*.zip
+*.rar

@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 enum TokenType {
@@ -23,12 +24,16 @@ public:
     Lexer(const std::string& src);
     std::vector<Token> tokenize();
     int getMatrixSize() const { return matrix_size; }
+    // Numeric preprocessor definitions are retained so rectangular matrix
+    // dimensions such as ROWS/COLS/INNER can be resolved by the backend.
+    const std::unordered_map<std::string, int>& getDefines() const { return defines; }
     
 private:
     std::string source;
     size_t index = 0;
     int current_line = 1;
     int matrix_size = 0;
+    std::unordered_map<std::string, int> defines;
     
     void handlePreprocessor();
     void parseMatrixSize();
